@@ -29,6 +29,12 @@ public struct Chunk<T>
         objectList.RemoveAtSwapBack(index);
     }
 
+    public void RemoveSwapBack(T obj)
+    {
+        objectList.RemoveSwapBack(obj);
+    }
+
+
     public void Clear()
     {
         objectList.Clear();

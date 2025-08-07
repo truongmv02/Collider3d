@@ -4,21 +4,21 @@ namespace TMV.Base
 {
     public  class SingletonMonoBehaviour<T> : MonoBehaviour where T : MonoBehaviour
     {
-        private static T _instance;
+        private static T instance;
 
         public static T Instance
         {
             get
             {
-                if (_instance != null) return _instance;
+                if (instance != null) return instance;
                 
-                _instance = FindObjectOfType<T>();
-                if (_instance != null) return _instance;
+                instance = FindObjectOfType<T>();
+                if (instance != null) return instance;
                 
                 var singletonObject = new GameObject(typeof(T).Name);
-                _instance = singletonObject.AddComponent<T>();
+                instance = singletonObject.AddComponent<T>();
 
-                return _instance;
+                return instance;
             }
         }
 
@@ -29,13 +29,13 @@ namespace TMV.Base
 
         protected virtual void CreateInstance(bool destroyInLoad = true)
         {
-            if (_instance != null && _instance != this)
+            if (instance != null && instance != this)
             {
                 Destroy(gameObject);
             }
             else
             {
-                _instance = this as T;
+                instance = this as T;
                 if (!destroyInLoad)
                 {
                     DontDestroyOnLoad(gameObject);

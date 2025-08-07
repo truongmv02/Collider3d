@@ -11,21 +11,6 @@ public class CircleCollider3d : ColliderBase
         get => radius;
     }
 
-    public float RealRadius
-    {
-        get
-        {
-            var lossyScale = transform.lossyScale;
-            return radius * Mathf.Max(lossyScale.x, lossyScale.y, lossyScale.z);
-        }
-    }
-
-    
-    private float GetMaxScale(Vector3 scale)
-    {
-        return Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z));
-    }
-    
     protected override void OnDrawGizmosSelected()
     {
         // base.OnDrawGizmosSelected();

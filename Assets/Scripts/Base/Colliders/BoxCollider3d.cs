@@ -11,8 +11,7 @@ public class BoxCollider3d : ColliderBase
         get => size;
     }
 
-    public Vector3 SizeReal => Vector3.Scale(size, transform.lossyScale);
-    public Vector3 HalfSizeReal => SizeReal * 0.5f;
+    public Vector3 HalfSizeReal => size * 0.5f;
     
     protected override void OnDrawGizmosSelected()
     {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class Observer : Singleton<Observer>
 {
-    private readonly Dictionary<string, HashSet<Action<object>>> _observes = new Dictionary<string, HashSet<Action<object>>>();
+    private readonly Dictionary<string, HashSet<Action<object>>> observes = new Dictionary<string, HashSet<Action<object>>>();
 
     public void AddObserver(string topicName, Action<object> observerCallback)
     {
@@ -35,11 +35,11 @@ public class Observer : Singleton<Observer>
 
     private HashSet<Action<object>> GetObserverList(string topicName)
     {
-        if (!_observes.ContainsKey(topicName))
+        if (!observes.ContainsKey(topicName))
         {
-            _observes.Add(topicName, new HashSet<Action<object>>());
+            observes.Add(topicName, new HashSet<Action<object>>());
         }
-        return _observes[topicName];
+        return observes[topicName];
     }
 
 }

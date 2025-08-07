@@ -23,7 +23,7 @@ public abstract class ColliderBase : MonoBehaviour
         set => center = value;
     }
 
-    public Vector3 CenterReal => transform.rotation * Vector3.Scale(center, transform.lossyScale);
+    public Vector3 CenterReal => transform.rotation * center;
 
     public Vector3 WorldCenter => transform.position + CenterReal;
 
@@ -32,7 +32,26 @@ public abstract class ColliderBase : MonoBehaviour
     private event Action<ColliderBase> onColliderStay;
     private event Action<ColliderBase> onColliderExit;
 
+    #region UNITY EVENT METHODS
 
+    protected virtual void OnEnable()
+    {
+        CollisionManager.Instance.AddCollider(this);
+    }
+
+    protected virtual void OnDestroy()
+    {
+        CollisionManager.Instance.RemoveCollider(this);
+    }
+
+    protected virtual void OnDisable()
+    {
+        CollisionManager.Instance.RemoveCollider(this);
+    }
+
+    #endregion
+
+    
     #region CALL EVENTS
 
     public virtual void OnColliderEnter(ColliderBase other)
