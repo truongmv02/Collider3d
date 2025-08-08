@@ -6,6 +6,9 @@ public abstract class ColliderBase : MonoBehaviour
     public int Index { set; get; }
 
     [SerializeField]
+    protected CollisionListener eventListener;
+
+    [SerializeField]
     protected Vector3 speed;
 
     public Vector3 Speed
@@ -27,12 +30,13 @@ public abstract class ColliderBase : MonoBehaviour
 
     public Vector3 WorldCenter => transform.position + CenterReal;
 
-    // Collider Events
-    private event Action<ColliderBase> onColliderEnter;
-    private event Action<ColliderBase> onColliderStay;
-    private event Action<ColliderBase> onColliderExit;
 
     #region UNITY EVENT METHODS
+
+    protected void Awake()
+    {
+        
+    }
 
     protected virtual void OnEnable()
     {
@@ -51,60 +55,11 @@ public abstract class ColliderBase : MonoBehaviour
 
     #endregion
 
+    public CollisionListener GetCollisionListener()
+    {
+        return eventListener;
+    }
     
-    #region CALL EVENTS
-
-    public virtual void OnColliderEnter(ColliderBase other)
-    {
-        onColliderEnter?.Invoke(other);
-    }
-
-    public virtual void OnColliderStay(ColliderBase other)
-    {
-        onColliderStay?.Invoke(other);
-    }
-
-    public virtual void OnColliderExit(ColliderBase other)
-    {
-        onColliderExit?.Invoke(other);
-    }
-
-    #endregion
-
-
-    #region ADD AND REMOVE COLLIDER EVENTS
-
-    public virtual void AddColliderEnterEvent(Action<ColliderBase> onEnter)
-    {
-        onColliderEnter += onEnter;
-    }
-
-    public virtual void AddColliderStayEvent(Action<ColliderBase> onStay)
-    {
-        onColliderStay += onStay;
-    }
-
-    public virtual void AddColliderExitEvent(Action<ColliderBase> onExit)
-    {
-        onColliderExit += onExit;
-    }
-
-    public virtual void RemoveColliderEnterEvent(Action<ColliderBase> onEnter)
-    {
-        onColliderEnter -= onEnter;
-    }
-
-    public virtual void RemoveColliderStayEvent(Action<ColliderBase> onStay)
-    {
-        onColliderStay -= onStay;
-    }
-
-    public virtual void RemoveColliderExitEvent(Action<ColliderBase> onExit)
-    {
-        onColliderExit -= onExit;
-    }
-
-    #endregion
 
     protected virtual void OnDrawGizmosSelected()
     {
