@@ -11,13 +11,13 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     private const float CHUNK_SIZE = 1f;
 
     private List<ColliderBase> colliderList = new List<ColliderBase>();
-    private Dictionary<Vector2Int, Chunk<ColliderBase>> chuckDict = new Dictionary<Vector2Int, Chunk<ColliderBase>>();
 
     private NativeList<float3> colliderSpeeds;
     private NativeList<float3> colliderPositions;
     private NativeList<quaternion> colliderRotations;
     private NativeList<float3> colliderOffsets;
     private NativeList<float3> colliderSizes;
+    private NativeHashMap<int2, NativeList<int>> chunkDict;
 
 
     #region UNITY EVENT METHODS
@@ -30,6 +30,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderOffsets = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderSizes = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderRotations = new NativeList<quaternion>(OBJECT_CAPACITY, Allocator.Persistent);
+        chunkDict = new NativeHashMap<int2, NativeList<int>>(64, Allocator.Persistent);
     }
 
     private void OnDestroy()
@@ -39,6 +40,18 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderOffsets.Dispose();
         colliderSizes.Dispose();
         colliderRotations.Dispose();
+        
+        var keys = chunkDict.GetKeyArray(Allocator.Temp);
+        foreach (var key in keys)
+        {
+            if (chunkDict.TryGetValue(key, out var list))
+            {
+                list.Dispose(); 
+            }
+        }
+        keys.Dispose();
+
+        chunkDict.Dispose();
     }
 
     private void Update()
@@ -60,6 +73,8 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 
     public virtual void RemoveCollider(ColliderBase collider)
     {
+        if (collider == null) return;
+        Debug.Log("delete index: " + collider.Index + " ," + colliderList.Count);
         int index = collider.Index;
         if (index == -1) return;
         if (index >= colliderList.Count)
@@ -90,39 +105,41 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     {
         var chunkKey = WorldToChunk(collider.transform.position);
         var chunk = GetChunk(chunkKey);
-        chunk.Add(collider);
-        chuckDict[chunkKey] = chunk;
+        chunk.Add(collider.Index);
     }
 
     private void RemoveColliderFromChunk(ColliderBase collider)
     {
         var chunkKey = WorldToChunk(collider.transform.position);
 
-        if (!chuckDict.TryGetValue(chunkKey, out var chunk)) return;
-        if (chunk.objectList.Count <= 1)
+        if (!chunkDict.TryGetValue(chunkKey, out var chunk)) return;
+        if (chunk.Length <= 1)
         {
-            chuckDict.Remove(chunkKey);
+            chunk.Dispose();
+            chunkDict.Remove(chunkKey);
             return;
         }
 
-        chunk.RemoveSwapBack(collider);
-        chuckDict[chunkKey] = chunk;
+        var index = chunk.IndexOf(collider.Index);
+        chunk.RemoveAtSwapBack(index);
     }
 
-    public Chunk<ColliderBase> GetChunk(Vector2Int position)
+    public NativeList<int> GetChunk(int2 position)
     {
-        if (!chuckDict.TryGetValue(position, out var chunk))
+        if (!chunkDict.TryGetValue(position, out var chunk))
         {
-            return new Chunk<ColliderBase>(position);
+            var newChunk = new NativeList<int>(8, Allocator.Persistent);
+            chunkDict.Add(position, newChunk);
+            return newChunk;
         }
 
         return chunk;
     }
 
-    private Vector2Int WorldToChunk(Vector3 position)
+    private int2 WorldToChunk(Vector3 position)
     {
         int x = Mathf.FloorToInt(position.x / CHUNK_SIZE);
         int z = Mathf.FloorToInt(position.z / CHUNK_SIZE);
-        return new Vector2Int(x, z);
+        return new int2(x, z);
     }
 }

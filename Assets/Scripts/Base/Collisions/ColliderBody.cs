@@ -1,15 +1,33 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class CollisionListener : MonoBehaviour
+public class ColliderBody : MonoBehaviour
 {
+    private static int id = 0;
+    public int ID { set; get; }
+
+    private ColliderBase[] colliders;
 
     // Collider Events
     private event Action<ColliderBase> onColliderEnter;
     private event Action<ColliderBase> onColliderStay;
     private event Action<ColliderBase> onColliderExit;
+
+
+    #region UNITY EVENT METHODS
+
+    private void Awake()
+    {
+        ID = id++;
+        Debug.Log("body id: " + ID);
+        colliders = GetComponentsInChildren<ColliderBase>();
+    }
     
-    
+
+    #endregion
+
+
     #region CALL EVENTS
 
     public virtual void OnColliderEnter(ColliderBase other)
@@ -28,10 +46,7 @@ public class CollisionListener : MonoBehaviour
     }
 
     #endregion
-    
-    
-    
-    
+
     #region ADD AND REMOVE COLLIDER EVENTS
 
     public virtual void AddColliderEnterEvent(Action<ColliderBase> onEnter)
@@ -65,5 +80,4 @@ public class CollisionListener : MonoBehaviour
     }
 
     #endregion
-
 }

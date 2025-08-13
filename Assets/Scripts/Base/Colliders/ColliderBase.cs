@@ -6,9 +6,6 @@ public abstract class ColliderBase : MonoBehaviour
     public int Index { set; get; }
 
     [SerializeField]
-    protected CollisionListener eventListener;
-
-    [SerializeField]
     protected Vector3 speed;
 
     public Vector3 Speed
@@ -17,26 +14,13 @@ public abstract class ColliderBase : MonoBehaviour
         set => speed = value;
     }
 
-    [SerializeField]
-    protected Vector3 center;
 
-    public Vector3 Center
-    {
-        get => center;
-        set => center = value;
-    }
-
-    public Vector3 CenterReal => transform.rotation * center;
-
-    public Vector3 WorldCenter => transform.position + CenterReal;
+    public Vector3 WorldCenter => transform.position;
 
 
     #region UNITY EVENT METHODS
 
-    protected void Awake()
-    {
-        
-    }
+
 
     protected virtual void OnEnable()
     {
@@ -45,7 +29,7 @@ public abstract class ColliderBase : MonoBehaviour
 
     protected virtual void OnDestroy()
     {
-        CollisionManager.Instance.RemoveCollider(this);
+        // CollisionManager.Instance.RemoveCollider(this);
     }
 
     protected virtual void OnDisable()
@@ -55,11 +39,6 @@ public abstract class ColliderBase : MonoBehaviour
 
     #endregion
 
-    public CollisionListener GetCollisionListener()
-    {
-        return eventListener;
-    }
-    
 
     protected virtual void OnDrawGizmosSelected()
     {

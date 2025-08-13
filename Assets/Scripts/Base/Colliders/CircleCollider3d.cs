@@ -17,7 +17,7 @@ public class CircleCollider3d : ColliderBase
         Gizmos.color = Color.yellow;
         var sphereScale = transform.lossyScale;
         var scale = radius * Mathf.Max(sphereScale.x, sphereScale.y, sphereScale.z);
-        var pos = transform.position + transform.rotation * Vector3.Scale(center, sphereScale);
+        var pos = transform.position ;
         Gizmos.DrawWireSphere(pos, scale);
         Gizmos.color = Color.white;
         Gizmos.matrix = Matrix4x4.identity;

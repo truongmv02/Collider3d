@@ -11,12 +11,13 @@ public class BoxCollider3d : ColliderBase
         get => size;
     }
 
+    
     public Vector3 HalfSizeReal => size * 0.5f;
     
     protected override void OnDrawGizmosSelected()
     {
         base.OnDrawGizmosSelected();
-        Gizmos.DrawWireCube(center, size);
+        Gizmos.DrawWireCube(Vector3.zero, size);
         Gizmos.matrix = Matrix4x4.identity;
         Gizmos.color = Color.white;
     }
