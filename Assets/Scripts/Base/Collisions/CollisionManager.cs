@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMV.Base;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -17,7 +18,6 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     private NativeList<quaternion> colliderRotations;
     private NativeList<float3> colliderOffsets;
     private NativeList<float3> colliderSizes;
-    private NativeHashMap<int2, NativeList<int>> chunkDict;
 
 
     #region UNITY EVENT METHODS
@@ -30,7 +30,6 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderOffsets = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderSizes = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderRotations = new NativeList<quaternion>(OBJECT_CAPACITY, Allocator.Persistent);
-        chunkDict = new NativeHashMap<int2, NativeList<int>>(64, Allocator.Persistent);
     }
 
     private void OnDestroy()
@@ -40,35 +39,80 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderOffsets.Dispose();
         colliderSizes.Dispose();
         colliderRotations.Dispose();
-        
-        var keys = chunkDict.GetKeyArray(Allocator.Temp);
-        foreach (var key in keys)
-        {
-            if (chunkDict.TryGetValue(key, out var list))
-            {
-                list.Dispose(); 
-            }
-        }
-        keys.Dispose();
-
-        chunkDict.Dispose();
     }
 
     private void Update()
     {
+        var count = colliderList.Count;
+
+        for (int i = 0; i < count; i++)
+        {
+            colliderPositions[i] = colliderList[i].transform.position;
+        }
+        
+        NativeArray<float3> deltaPositions = new NativeArray<float3>(count, Allocator.TempJob);
+        NativeParallelMultiHashMap<int2, int> chunks =
+            new NativeParallelMultiHashMap<int2, int>(count, Allocator.TempJob);
+
+        AssignToChunkJob assignJob = new AssignToChunkJob()
+        {
+            positions = colliderPositions,
+            chunks = chunks.AsParallelWriter(),
+            chunkSize = CHUNK_SIZE
+        };
+        assignJob.Schedule(count, 64).Complete();
+
+        CollisionJob job = new CollisionJob()
+        {
+            positions = colliderPositions,
+            sizes = colliderSizes,
+            deltaPositions = deltaPositions,
+            chunks = chunks
+        };
+        JobHandle handle = job.Schedule(count, 64);
+        handle.Complete();
+
+        ApplyDeltaJob applyDeltaJob = new ApplyDeltaJob()
+        {
+            positions = colliderPositions,
+            deltaPositions = deltaPositions,
+        };
+        applyDeltaJob.Schedule(count, 64).Complete();
+        UpdateColliderPositions(deltaPositions);
+
+        chunks.Dispose();
+        deltaPositions.Dispose();
     }
 
     #endregion
 
 
+    private void UpdateColliderPositions(NativeArray<float3> positions)
+    {
+        for (int i = 0, count = colliderPositions.Length; i < count; i++)
+        {
+            colliderList[i].transform.position += new Vector3(positions[i].x, 0, positions[i].z);
+        }
+    }
+
     public void AddCollider(ColliderBase collider)
     {
         if (collider == null) return;
         collider.Index = colliderList.Count;
+        switch (collider)
+        {
+            case CircleCollider3d circle:
+                colliderSizes.Add(new float3(circle.Radius, 0, 0));
+                break;
+
+            case BoxCollider3d box:
+                colliderSizes.Add(box.Size);
+                break;
+        }
+
         colliderList.Add(collider);
         colliderSpeeds.Add(collider.Speed);
         colliderPositions.Add(collider.transform.position);
-        AddColliderToChunk(collider);
     }
 
     public virtual void RemoveCollider(ColliderBase collider)
@@ -83,11 +127,10 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             return;
         }
 
-        RemoveColliderFromChunk(collider);
-
         int lastIndex = colliderList.Count - 1;
         colliderPositions[index] = colliderPositions[lastIndex];
         colliderSpeeds[index] = colliderSpeeds[lastIndex];
+        colliderSizes[index] = colliderSizes[lastIndex];
 
         var lastCollider = colliderList[lastIndex];
         colliderList[index] = lastCollider;
@@ -97,44 +140,11 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderList.RemoveAt(lastIndex);
         colliderSpeeds.RemoveAt(lastIndex);
         colliderPositions.RemoveAt(lastIndex);
+        colliderSpeeds.RemoveAt(lastIndex);
 
         collider.Index = -1;
     }
 
-    private void AddColliderToChunk(ColliderBase collider)
-    {
-        var chunkKey = WorldToChunk(collider.transform.position);
-        var chunk = GetChunk(chunkKey);
-        chunk.Add(collider.Index);
-    }
-
-    private void RemoveColliderFromChunk(ColliderBase collider)
-    {
-        var chunkKey = WorldToChunk(collider.transform.position);
-
-        if (!chunkDict.TryGetValue(chunkKey, out var chunk)) return;
-        if (chunk.Length <= 1)
-        {
-            chunk.Dispose();
-            chunkDict.Remove(chunkKey);
-            return;
-        }
-
-        var index = chunk.IndexOf(collider.Index);
-        chunk.RemoveAtSwapBack(index);
-    }
-
-    public NativeList<int> GetChunk(int2 position)
-    {
-        if (!chunkDict.TryGetValue(position, out var chunk))
-        {
-            var newChunk = new NativeList<int>(8, Allocator.Persistent);
-            chunkDict.Add(position, newChunk);
-            return newChunk;
-        }
-
-        return chunk;
-    }
 
     private int2 WorldToChunk(Vector3 position)
     {

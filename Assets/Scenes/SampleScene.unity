@@ -218,7 +218,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 958daaebe21f453c9d319762934d9efa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  eventListener: {fileID: 0}
   speed: {x: 0, y: 0, z: 0}
   radius: 0.5
 --- !u!1 &330585543
@@ -488,7 +487,6 @@ GameObject:
   - component: {fileID: 595151692}
   - component: {fileID: 595151691}
   - component: {fileID: 595151690}
-  - component: {fileID: 595151695}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -508,7 +506,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ba8e22f31094be9988e72f54b28e6d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  eventListener: {fileID: 0}
   speed: {x: 0, y: 0, z: 0}
   size: {x: 1, y: 1, z: 1}
 --- !u!23 &595151691
@@ -576,21 +573,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &595151695
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 595151689}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 958daaebe21f453c9d319762934d9efa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  eventListener: {fileID: 0}
-  speed: {x: 0, y: 0, z: 0}
-  radius: 0.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
