@@ -34,7 +34,7 @@ public abstract class ColliderBase : MonoBehaviour
 
     protected virtual void OnDisable()
     {
-        CollisionManager.Instance.RemoveCollider(this);
+        // CollisionManager.Instance.RemoveCollider(this);
     }
 
     #endregion

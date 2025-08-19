@@ -39,11 +39,6 @@ public struct CollisionJob : IJobParallelFor
                     if (otherIndex == index) continue;
                     CheckCollision(index, otherIndex);
                 } while (chunks.TryGetNextValue(out otherIndex, ref it));
-
-                // if (chunkDict.TryGetValue(key, out NativeList<int> colliders))
-                // {
-                //     CheckCollision(index, colliders);
-                // }
             }
         }
     }
@@ -51,20 +46,18 @@ public struct CollisionJob : IJobParallelFor
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void CheckCollision(int index, int otherIndex)
     {
-        float3 position = positions[index];
+        float3 position = positions[index] + deltaPositions[index];
         float3 size = sizes[index];
-        float3 otherPosition = positions[otherIndex];
+        float3 otherPosition = positions[otherIndex] +  deltaPositions[otherIndex];
         float3 otherSize = sizes[otherIndex];
-        float3 delta = otherPosition - position;
-        float distSquared = math.lengthsq(delta);
-        float radiusSum = size.x + otherSize.x;
-        if (distSquared >= radiusSum * radiusSum) return;
-        float dist = math.sqrt(distSquared);
-        float3 normal = dist > 0 ? delta / dist : new float3(1, 0, 0);
-        normal.y = 0;
-        float overlap = radiusSum - dist;
-        deltaPositions[index] -= normal * (overlap * 0.5f);
-        deltaPositions[otherIndex] += normal * (overlap * 0.5f);
+        
+        float distance = math.distance(new float2(position.x, position.z), new float2(otherPosition.x, otherPosition.z));
+        if(size.x + otherSize.x <= distance) return;
+        float3 direction = otherPosition - position;
+        var normal = math.normalize(direction);
+        var depth = size.x + otherSize.x - distance + 0.001f;
+        deltaPositions[index] -= normal * (depth * 0.5f);
+        deltaPositions[otherIndex] += normal * (depth * 0.5f);
     }
 }
 

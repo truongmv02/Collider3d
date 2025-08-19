@@ -34,8 +34,13 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 
     private void OnDestroy()
     {
-        colliderPositions.Dispose();
+        Clear();
+    }
+
+    public void Clear()
+    {
         colliderSpeeds.Dispose();
+        colliderPositions.Dispose();
         colliderOffsets.Dispose();
         colliderSizes.Dispose();
         colliderRotations.Dispose();
@@ -49,7 +54,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         {
             colliderPositions[i] = colliderList[i].transform.position;
         }
-        
+
         NativeArray<float3> deltaPositions = new NativeArray<float3>(count, Allocator.TempJob);
         NativeParallelMultiHashMap<int2, int> chunks =
             new NativeParallelMultiHashMap<int2, int>(count, Allocator.TempJob);
