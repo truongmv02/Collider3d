@@ -46,13 +46,25 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderRotations.Dispose();
     }
 
+    public void SetSpeed(ColliderBase collider, Vector3 speed)
+    {
+        colliderSpeeds[collider.Index] = speed;
+    }
+
     private void Update()
     {
         var count = colliderList.Count;
+        MoveJob moveJob = new MoveJob()
+        {
+            positions = colliderPositions,
+            speeds = colliderSpeeds,
+        };
+        moveJob.Schedule(count, 128).Complete();
 
         for (int i = 0; i < count; i++)
         {
-            colliderPositions[i] = colliderList[i].transform.position;
+            colliderList[i].transform.position = new Vector3(colliderPositions[i].x, 0, colliderPositions[i].z);
+            // colliderPositions[i] = colliderList[i].transform.position;
         }
 
         NativeArray<float3> deltaPositions = new NativeArray<float3>(count, Allocator.TempJob);
@@ -65,13 +77,14 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             chunks = chunks.AsParallelWriter(),
             chunkSize = CHUNK_SIZE
         };
-        assignJob.Schedule(count, 64).Complete();
+        assignJob.Schedule(count, 128).Complete();
 
         CollisionJob job = new CollisionJob()
         {
             positions = colliderPositions,
             sizes = colliderSizes,
             deltaPositions = deltaPositions,
+            speeds = colliderSpeeds,
             chunks = chunks
         };
         JobHandle handle = job.Schedule(count, 64);
@@ -82,7 +95,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             positions = colliderPositions,
             deltaPositions = deltaPositions,
         };
-        applyDeltaJob.Schedule(count, 64).Complete();
+        applyDeltaJob.Schedule(count, 128).Complete();
         UpdateColliderPositions(deltaPositions);
 
         chunks.Dispose();

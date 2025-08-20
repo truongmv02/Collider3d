@@ -17,6 +17,9 @@ public struct CollisionJob : IJobParallelFor
     [ReadOnly]
     public NativeParallelMultiHashMap<int2, int> chunks;
 
+    [ReadOnly]
+    public NativeList<float3> speeds;
+
     [NativeDisableParallelForRestriction]
     public NativeArray<float3> deltaPositions;
 
@@ -48,20 +51,34 @@ public struct CollisionJob : IJobParallelFor
     {
         float3 position = positions[index] + deltaPositions[index];
         float3 size = sizes[index];
-        float3 otherPosition = positions[otherIndex] +  deltaPositions[otherIndex];
+        float3 otherPosition = positions[otherIndex] + deltaPositions[otherIndex];
         float3 otherSize = sizes[otherIndex];
+
+        float distance =
+            math.distance(new float2(position.x, position.z), new float2(otherPosition.x, otherPosition.z));
+        if (size.x + otherSize.x <= distance) return;
         
-        float distance = math.distance(new float2(position.x, position.z), new float2(otherPosition.x, otherPosition.z));
-        if(size.x + otherSize.x <= distance) return;
         float3 direction = otherPosition - position;
         var normal = math.normalize(direction);
         var depth = size.x + otherSize.x - distance + 0.001f;
-        deltaPositions[index] -= normal * (depth * 0.5f);
-        deltaPositions[otherIndex] += normal * (depth * 0.5f);
+        
+        float3 velocity = speeds[index];
+        float dot = math.dot(math.normalize(velocity), normal);
+        
+        float3 correction = normal * (depth * 0.5f * 0.6f);
+        if (dot > 0)
+        {
+            deltaPositions[index] -= correction; 
+        }
+        else
+        {
+            deltaPositions[otherIndex] += correction;
+        }
+        
     }
 }
 
-[BurstCompile]
+[BurstCompile(FloatMode = FloatMode.Fast)]
 public struct ApplyDeltaJob : IJobParallelFor
 {
     public NativeArray<float3> positions;
@@ -71,11 +88,11 @@ public struct ApplyDeltaJob : IJobParallelFor
 
     public void Execute(int index)
     {
-        positions[index] += deltaPositions[index];
+        positions[index] += deltaPositions[index] ;
     }
 }
 
-[BurstCompile]
+[BurstCompile(FloatMode = FloatMode.Fast)]
 public struct AssignToChunkJob : IJobParallelFor
 {
     [ReadOnly]
