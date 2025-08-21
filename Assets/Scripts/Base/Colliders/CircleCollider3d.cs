@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Runtime.CompilerServices;
+using UnityEngine;
 
 public class CircleCollider3d : ColliderBase
 {
@@ -7,7 +8,9 @@ public class CircleCollider3d : ColliderBase
 
     public float Radius
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => radius = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => radius;
     }
 

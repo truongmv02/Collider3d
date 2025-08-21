@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 8566404090574735704}
   - component: {fileID: 4016315538432470104}
   m_Layer: 0
-  m_Name: Sphere
+  m_Name: CustomCollier
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

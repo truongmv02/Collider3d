@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using TMV.Base;
 using Unity.Collections;
 using Unity.Jobs;
@@ -18,7 +19,9 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     private NativeList<quaternion> colliderRotations;
     private NativeList<float3> colliderOffsets;
     private NativeList<float3> colliderSizes;
-
+    private NativeList<float3> deltaPositions;
+    private NativeParallelMultiHashMap<int2, int> chunks;
+    public NativeParallelMultiHashMap<int, int> collisions;
 
     #region UNITY EVENT METHODS
 
@@ -30,6 +33,9 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderOffsets = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderSizes = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderRotations = new NativeList<quaternion>(OBJECT_CAPACITY, Allocator.Persistent);
+        deltaPositions = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
+        chunks = new NativeParallelMultiHashMap<int2, int>(OBJECT_CAPACITY, Allocator.Persistent);
+        collisions = new NativeParallelMultiHashMap<int, int>(OBJECT_CAPACITY, Allocator.Persistent);
     }
 
     private void OnDestroy()
@@ -44,14 +50,18 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderOffsets.Dispose();
         colliderSizes.Dispose();
         colliderRotations.Dispose();
+        chunks.Dispose();
+        deltaPositions.Dispose();
+        collisions.Dispose();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSpeed(ColliderBase collider, Vector3 speed)
     {
         colliderSpeeds[collider.Index] = speed;
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         var count = colliderList.Count;
         MoveJob moveJob = new MoveJob()
@@ -67,9 +77,8 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             // colliderPositions[i] = colliderList[i].transform.position;
         }
 
-        NativeArray<float3> deltaPositions = new NativeArray<float3>(count, Allocator.TempJob);
-        NativeParallelMultiHashMap<int2, int> chunks =
-            new NativeParallelMultiHashMap<int2, int>(count, Allocator.TempJob);
+
+        chunks.Clear();
 
         AssignToChunkJob assignJob = new AssignToChunkJob()
         {
@@ -98,18 +107,19 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         applyDeltaJob.Schedule(count, 128).Complete();
         UpdateColliderPositions(deltaPositions);
 
-        chunks.Dispose();
-        deltaPositions.Dispose();
+        // chunks.Dispose();
+        // deltaPositions.Dispose();
     }
 
     #endregion
 
-
-    private void UpdateColliderPositions(NativeArray<float3> positions)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void UpdateColliderPositions(NativeList<float3> positions)
     {
         for (int i = 0, count = colliderPositions.Length; i < count; i++)
         {
             colliderList[i].transform.position += new Vector3(positions[i].x, 0, positions[i].z);
+            positions[i] = float3.zero;
         }
     }
 
@@ -128,6 +138,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                 break;
         }
 
+        deltaPositions.Add(float3.zero);
         colliderList.Add(collider);
         colliderSpeeds.Add(collider.Speed);
         colliderPositions.Add(collider.transform.position);
@@ -149,6 +160,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderPositions[index] = colliderPositions[lastIndex];
         colliderSpeeds[index] = colliderSpeeds[lastIndex];
         colliderSizes[index] = colliderSizes[lastIndex];
+        deltaPositions[index] = deltaPositions[lastIndex];
 
         var lastCollider = colliderList[lastIndex];
         colliderList[index] = lastCollider;
@@ -159,15 +171,28 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         colliderSpeeds.RemoveAt(lastIndex);
         colliderPositions.RemoveAt(lastIndex);
         colliderSpeeds.RemoveAt(lastIndex);
+        deltaPositions.RemoveAt(lastIndex);
 
         collider.Index = -1;
     }
 
-
-    private int2 WorldToChunk(Vector3 position)
+    private void ResizeCollisionMap()
     {
-        int x = Mathf.FloorToInt(position.x / CHUNK_SIZE);
-        int z = Mathf.FloorToInt(position.z / CHUNK_SIZE);
-        return new int2(x, z);
+        int capacity = collisions.Capacity * 2;
+        var newCollisions = new NativeParallelMultiHashMap<int, int>(capacity, Allocator.Persistent);
+        var keys = collisions.GetKeyArray(Allocator.Temp);
+        foreach (var key in keys)
+        {
+            if (collisions.TryGetFirstValue(key, out var value, out var it))
+            {
+                do
+                {
+                    newCollisions.Add(key, value);
+                } while (collisions.TryGetNextValue(out value, ref it));
+            }
+        }
+        keys.Dispose();
+        collisions.Dispose();
+        collisions = newCollisions;
     }
 }

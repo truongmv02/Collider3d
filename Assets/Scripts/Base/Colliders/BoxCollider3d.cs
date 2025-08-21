@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Runtime.CompilerServices;
+using UnityEngine;
 
 public class BoxCollider3d : ColliderBase
 {
@@ -7,7 +8,9 @@ public class BoxCollider3d : ColliderBase
 
     public Vector3 Size
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => size = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => size;
     }
 

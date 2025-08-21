@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace TMV.Base
 {
@@ -8,6 +9,7 @@ namespace TMV.Base
 
         public static T Instance
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 if (instance != null) return instance;

@@ -1,16 +1,25 @@
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public abstract class ColliderBase : MonoBehaviour
 {
-    public int Index { set; get; }
+    public int Index
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get;
+    }
 
     [SerializeField]
     protected Vector3 speed;
 
     public Vector3 Speed
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => speed;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => speed = value;
     }
 
@@ -19,8 +28,6 @@ public abstract class ColliderBase : MonoBehaviour
 
 
     #region UNITY EVENT METHODS
-
-
 
     protected virtual void OnEnable()
     {

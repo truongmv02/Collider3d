@@ -3,16 +3,11 @@ using System.Collections.Generic;
 using TMV.Base;
 using UnityEngine;
 
-public class EnemyManager : SingletonMonoBehaviour<EnemyManager>
+public class EnemyManager1 : SingletonMonoBehaviour<EnemyManager1>
 {
     public GameObject target;
 
-    public List<ColliderBase> colliders = new List<ColliderBase>(1000);
-    private CollisionManager collisionManager;
-    private void Start()
-    {
-         collisionManager = CollisionManager.Instance;
-    }
+    public List<Rigidbody> colliders = new List<Rigidbody>(1000);
 
 
     private void Update()
@@ -23,8 +18,8 @@ public class EnemyManager : SingletonMonoBehaviour<EnemyManager>
             var direction = target.transform.position - collider.transform.position;
             direction.Normalize();
             direction.y = 0;
-            collider.Speed = 5f * Time.fixedDeltaTime * direction;
-            collisionManager.SetSpeed(collider, collider.Speed);
+            collider.velocity = 500f * Time.deltaTime * direction;
+            // CollisionManager.Instance.SetSpeed(collider, collider.Speed);
         }
     }
 }
