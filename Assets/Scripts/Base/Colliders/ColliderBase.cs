@@ -4,6 +4,7 @@ using UnityEngine;
 
 public abstract class ColliderBase : MonoBehaviour
 {
+    [field: SerializeField]
     public int Index
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -23,11 +24,23 @@ public abstract class ColliderBase : MonoBehaviour
         set => speed = value;
     }
 
+    private Transform transformCache;
+    
+    public Transform Transform
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => transformCache;
+    }
 
     public Vector3 WorldCenter => transform.position;
 
 
     #region UNITY EVENT METHODS
+
+    protected virtual void Awake()
+    {
+        transformCache = transform;
+    }
 
     protected virtual void OnEnable()
     {

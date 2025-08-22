@@ -19,17 +19,20 @@ public struct CollisionJob : IJobParallelFor
 
     [ReadOnly]
     public NativeList<float3> speeds;
+    
+    [ReadOnly]
+    public float chunkSize;
 
     [NativeDisableParallelForRestriction]
     public NativeArray<float3> deltaPositions;
-    // public NativeParallelMultiHashMap<int, int>.ParallelWriter collisions;
+    public NativeParallelMultiHashMap<int, int>.ParallelWriter collisions;
 
     public void Execute(int index)
     {
         float3 position = positions[index];
         int2 key;
-        int cellX = (int)math.floor(position.x);
-        int cellY = (int)math.floor(position.z);
+        int cellX = (int)math.floor(position.x/chunkSize);
+        int cellY = (int)math.floor(position.z/ chunkSize);
         for (int x = -1; x <= 1; x++)
         {
             for (int y = -1; y <= 1; y++)
@@ -70,7 +73,9 @@ public struct CollisionJob : IJobParallelFor
 
         float dist = math.sqrt(distSq);
         if (dist < 1e-6f) return; // tránh chia 0
-
+        
+        collisions.Add(index, otherIndex);
+        
         float invDist = 1f / dist;
         float3 normal = new float3(dx * invDist, 0, dz * invDist);
 

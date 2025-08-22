@@ -14,6 +14,12 @@ public class CircleCollider3d : ColliderBase
         get => radius;
     }
 
+    [ContextMenu("set speed")]
+    public void SetSpeed()
+    {
+        CollisionManager.Instance.SetSpeed(this, speed);
+    }
+
     protected override void OnDrawGizmosSelected()
     {
         // base.OnDrawGizmosSelected();

@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Menu.unity
+    guid: 84f56c9542ed3864790cd16ebd454c3d
+  - enabled: 1
     path: Assets/Scenes/CustomCollider.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Scenes/ColliderUnity.unity
+    guid: ca36893dafd180348948ab8ac2c0d4bb
   m_configObjects: {}
