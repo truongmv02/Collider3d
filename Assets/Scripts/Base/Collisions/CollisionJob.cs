@@ -9,6 +9,9 @@ using UnityEngine;
 public struct CollisionJob : IJobParallelFor
 {
     [ReadOnly]
+    public NativeList<CollisionLayer> layers, collisionMasks, interactionMasks;
+
+    [ReadOnly]
     public NativeList<float3> positions;
 
     [ReadOnly]
@@ -19,20 +22,21 @@ public struct CollisionJob : IJobParallelFor
 
     [ReadOnly]
     public NativeList<float3> speeds;
-    
+
     [ReadOnly]
     public float chunkSize;
 
     [NativeDisableParallelForRestriction]
     public NativeArray<float3> deltaPositions;
+
     public NativeParallelMultiHashMap<int, int>.ParallelWriter collisions;
 
     public void Execute(int index)
     {
         float3 position = positions[index];
         int2 key;
-        int cellX = (int)math.floor(position.x/chunkSize);
-        int cellY = (int)math.floor(position.z/ chunkSize);
+        int cellX = (int)math.floor(position.x / chunkSize);
+        int cellY = (int)math.floor(position.z / chunkSize);
         for (int x = -1; x <= 1; x++)
         {
             for (int y = -1; y <= 1; y++)
@@ -53,9 +57,30 @@ public struct CollisionJob : IJobParallelFor
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool CanCollide(CollisionLayer layerA, CollisionLayer maskA, CollisionLayer layerB, CollisionLayer maskB)
+    {
+        return (layerA & maskB) != 0 && (layerB & maskA) != 0;
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void CheckCollision(int index, int otherIndex)
     {
-        
+        CollisionLayer layerA = layers[index];
+        CollisionLayer layerB = layers[otherIndex];
+
+        CollisionLayer collisionMaskA = collisionMasks[index];
+        CollisionLayer collisionMaskB = collisionMasks[otherIndex];
+
+        CollisionLayer interactionA = interactionMasks[index];
+        CollisionLayer interactionB = interactionMasks[otherIndex];
+
+        bool isCollision = CanCollide(layerA, collisionMaskA, layerB, collisionMaskB);
+        bool isInteraction = CanCollide(layerA, interactionA, layerB, interactionB);
+
+        if (!isCollision && !isInteraction) return;
+
+
         float3 posA = positions[index] + deltaPositions[index];
         float3 posB = positions[otherIndex] + deltaPositions[otherIndex];
 
@@ -73,9 +98,14 @@ public struct CollisionJob : IJobParallelFor
 
         float dist = math.sqrt(distSq);
         if (dist < 1e-6f) return; // tránh chia 0
+
+        if (isInteraction)
+        {
+            collisions.Add(index, otherIndex);
+        }
         
-        collisions.Add(index, otherIndex);
-        
+        if(!isCollision) return;
+
         float invDist = 1f / dist;
         float3 normal = new float3(dx * invDist, 0, dz * invDist);
 
@@ -93,7 +123,7 @@ public struct CollisionJob : IJobParallelFor
             deltaPositions[index] -= correction;
         else
             deltaPositions[otherIndex] += correction;
-        
+
         // float3 position = positions[index] + deltaPositions[index];
         // float3 size = sizes[index];
         // float3 otherPosition = positions[otherIndex] + deltaPositions[otherIndex];
@@ -132,7 +162,7 @@ public struct ApplyDeltaJob : IJobParallelFor
 
     public void Execute(int index)
     {
-        positions[index] += deltaPositions[index] ;
+        positions[index] += deltaPositions[index];
     }
 }
 

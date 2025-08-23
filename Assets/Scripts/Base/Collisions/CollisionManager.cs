@@ -16,12 +16,15 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 
     private List<ColliderBase> colliderList = new List<ColliderBase>();
 
+    private NativeList<CollisionLayer> layers;
+    private NativeList<CollisionLayer> collisionMasks;
+    private NativeList<CollisionLayer> interactionMasks;
+    
     private NativeList<float3> colliderSpeeds;
     private NativeList<float3> colliderPositions;
-    private NativeList<quaternion> colliderRotations;
-    private NativeList<float3> colliderOffsets;
     private NativeList<float3> colliderSizes;
     private NativeList<float3> deltaPositions;
+    private NativeList<quaternion> colliderRotations;
     private NativeParallelMultiHashMap<int2, int> chunks;
     public NativeParallelMultiHashMap<int, int> collisions;
     public NativeParallelMultiHashMap<int, int> newCollisions;
@@ -31,9 +34,11 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     protected override void Awake()
     {
         base.Awake();
-        colliderSpeeds = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
+        layers = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
+        collisionMasks = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
+        interactionMasks = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderPositions = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
-        colliderOffsets = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
+        colliderSpeeds = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderSizes = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderRotations = new NativeList<quaternion>(OBJECT_CAPACITY, Allocator.Persistent);
         deltaPositions = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
@@ -49,9 +54,11 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 
     public void Clear()
     {
+        layers.Dispose();
+        collisionMasks.Dispose();
+        interactionMasks.Dispose();
         colliderSpeeds.Dispose();
         colliderPositions.Dispose();
-        colliderOffsets.Dispose();
         colliderSizes.Dispose();
         colliderRotations.Dispose();
         chunks.Dispose();
@@ -85,7 +92,6 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             // colliderPositions[i] = colliderList[i].transform.position;
         }
 
-
         chunks.Clear();
 
         AssignToChunkJob assignJob = new AssignToChunkJob()
@@ -98,6 +104,9 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         newCollisions.Clear();
         CollisionJob job = new CollisionJob()
         {
+            layers = layers,
+            collisionMasks = collisionMasks,
+            interactionMasks = interactionMasks,
             positions = colliderPositions,
             sizes = colliderSizes,
             deltaPositions = deltaPositions,
@@ -153,8 +162,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                     }
                     else
                     {
-                        // Debug.Log($"Enter {i}<->{other}");
-                        
+                        Debug.Log($"Enter {i}<->{other}");
                     }
                 } while (newCollisions.TryGetNextValue(out other, ref it));
             }
@@ -194,7 +202,10 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                 colliderSizes.Add(box.Size);
                 break;
         }
-
+        
+        layers.Add(collider.Layer);
+        collisionMasks.Add(collider.CollisionMask);
+        interactionMasks.Add(collider.InteractionMask);
         deltaPositions.Add(float3.zero);
         colliderList.Add(collider);
         colliderSpeeds.Add(collider.Speed);
@@ -216,21 +227,27 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         }
 
         int lastIndex = colliderList.Count - 1;
+        layers[index]= layers[lastIndex];
+        collisionMasks[index]= collisionMasks[lastIndex];
+        interactionMasks[index]= interactionMasks[lastIndex];
         colliderPositions[index] = colliderPositions[lastIndex];
         colliderSpeeds[index] = colliderSpeeds[lastIndex];
         colliderSizes[index] = colliderSizes[lastIndex];
         deltaPositions[index] = deltaPositions[lastIndex];
-
+        
         var lastCollider = colliderList[lastIndex];
         colliderList[index] = lastCollider;
         colliderList[lastIndex] = collider;
         lastCollider.Index = index;
 
         colliderList.RemoveAt(lastIndex);
+        layers.RemoveAt(lastIndex);
+        collisionMasks.RemoveAt(lastIndex);
+        interactionMasks.RemoveAt(lastIndex);
         colliderSpeeds.RemoveAt(lastIndex);
         colliderPositions.RemoveAt(lastIndex);
-        colliderSpeeds.RemoveAt(lastIndex);
         deltaPositions.RemoveAt(lastIndex);
+        
 
         collider.Index = -1;
     }

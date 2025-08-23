@@ -14,7 +14,17 @@ public abstract class ColliderBase : MonoBehaviour
     }
 
     [SerializeField]
+    protected CollisionLayer layer;
+
+    [SerializeField]
+    protected CollisionLayer collisionMask;
+
+    [SerializeField]
+    protected CollisionLayer interactionMask;
+
+    [SerializeField]
     protected Vector3 speed;
+
 
     public Vector3 Speed
     {
@@ -25,12 +35,37 @@ public abstract class ColliderBase : MonoBehaviour
     }
 
     private Transform transformCache;
-    
+
     public Transform Transform
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => transformCache;
     }
+
+    public CollisionLayer Layer
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => layer;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => layer = value;
+    }
+
+    public CollisionLayer CollisionMask
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => collisionMask;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => collisionMask = value;
+    }
+
+    public CollisionLayer InteractionMask
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => interactionMask;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => interactionMask = value;
+    }
+
 
     public Vector3 WorldCenter => transform.position;
 
