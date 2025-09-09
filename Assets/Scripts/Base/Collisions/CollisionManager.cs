@@ -12,14 +12,17 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     private const int OBJECT_CAPACITY = 1000;
     private const float CHUNK_SIZE = 1f;
 
-    private const int COLLISION_MAX = 8;
+    private const int COLLISION_MAX = 16;
 
     private List<ColliderBase> colliderList = new List<ColliderBase>();
 
     private NativeList<CollisionLayer> layers;
     private NativeList<CollisionLayer> collisionMasks;
     private NativeList<CollisionLayer> interactionMasks;
-    
+
+    private NativeList<bool> isTriggers;
+    private NativeList<bool> isKinematics;
+
     private NativeList<float3> colliderSpeeds;
     private NativeList<float3> colliderPositions;
     private NativeList<float3> colliderSizes;
@@ -34,6 +37,8 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     protected override void Awake()
     {
         base.Awake();
+        isTriggers = new NativeList<bool>(OBJECT_CAPACITY, Allocator.Persistent);
+        isKinematics = new NativeList<bool>(OBJECT_CAPACITY, Allocator.Persistent);
         layers = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
         collisionMasks = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
         interactionMasks = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
@@ -54,6 +59,8 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 
     public void Clear()
     {
+        isTriggers.Dispose();
+        isKinematics.Dispose();
         layers.Dispose();
         collisionMasks.Dispose();
         interactionMasks.Dispose();
@@ -66,17 +73,34 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         collisions.Dispose();
     }
 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void SetIsTrigger(ColliderBase collider, bool isTrigger)
+    {
+        isTriggers[collider.Index] = isTrigger;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void SetIsKinematic(ColliderBase collider, bool isKinematic)
+    {
+        isKinematics[collider.Index] = isKinematic;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSpeed(ColliderBase collider, Vector3 speed)
     {
         colliderSpeeds[collider.Index] = speed;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void SetPosition(ColliderBase collider, Vector3 position)
+    {
+        colliderPositions[collider.Index] = position;
+    }
+
     private void Update()
     {
-        var tmp = collisions;
-        collisions = newCollisions;
-        newCollisions = tmp;
+        (collisions, newCollisions) = (newCollisions, collisions);
 
         var count = colliderList.Count;
         MoveJob moveJob = new MoveJob()
@@ -88,8 +112,8 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 
         for (int i = 0; i < count; i++)
         {
-            colliderList[i].Transform.position = new Vector3(colliderPositions[i].x, 0, colliderPositions[i].z);
-            // colliderPositions[i] = colliderList[i].transform.position;
+            // colliderList[i].Transform.position = new Vector3(colliderPositions[i].x, 0, colliderPositions[i].z);
+            colliderPositions[i] = colliderList[i].Transform.position;
         }
 
         chunks.Clear();
@@ -104,6 +128,8 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         newCollisions.Clear();
         CollisionJob job = new CollisionJob()
         {
+            isTriggers = isTriggers,
+            isKinematics = isKinematics,
             layers = layers,
             collisionMasks = collisionMasks,
             interactionMasks = interactionMasks,
@@ -154,11 +180,14 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             {
                 do
                 {
-                    if(i>other ) continue;
+                    if (i > other) continue;
                     if (collisions.ContainsKeyValue(i, other))
                     {
-                        
-                        // Debug.Log($"Stay {i}<->{other}");
+                        var col1 = colliderList[i];
+                        var col2 = colliderList[other];
+                        col1.OnColliderStay(col2);
+                        col2.OnColliderStay(col1);
+                        Debug.Log($"Stay {i}<->{other}");
                     }
                     else
                     {
@@ -177,11 +206,10 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             {
                 do
                 {
-                    if(i>other ) continue;
+                    if (i > other) continue;
                     if (!newCollisions.ContainsKeyValue(i, other))
                     {
-                        // Debug.Log($"Exit {i}<->{other}");
-                        
+                        Debug.Log($"Exit {i}<->{other}");
                     }
                 } while (collisions.TryGetNextValue(out other, ref it));
             }
@@ -202,7 +230,9 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                 colliderSizes.Add(box.Size);
                 break;
         }
-        
+
+        isTriggers.Add(collider.IsTrigger);
+        isKinematics.Add(collider.IsKinematic);
         layers.Add(collider.Layer);
         collisionMasks.Add(collider.CollisionMask);
         interactionMasks.Add(collider.InteractionMask);
@@ -227,27 +257,32 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         }
 
         int lastIndex = colliderList.Count - 1;
-        layers[index]= layers[lastIndex];
-        collisionMasks[index]= collisionMasks[lastIndex];
-        interactionMasks[index]= interactionMasks[lastIndex];
+        isTriggers[index] = isTriggers[lastIndex];
+        isKinematics[index] = isKinematics[lastIndex];
+        layers[index] = layers[lastIndex];
+        collisionMasks[index] = collisionMasks[lastIndex];
+        interactionMasks[index] = interactionMasks[lastIndex];
         colliderPositions[index] = colliderPositions[lastIndex];
         colliderSpeeds[index] = colliderSpeeds[lastIndex];
         colliderSizes[index] = colliderSizes[lastIndex];
         deltaPositions[index] = deltaPositions[lastIndex];
-        
+
         var lastCollider = colliderList[lastIndex];
         colliderList[index] = lastCollider;
         colliderList[lastIndex] = collider;
         lastCollider.Index = index;
 
+
         colliderList.RemoveAt(lastIndex);
+        isTriggers.RemoveAt(lastIndex);
+        isKinematics.RemoveAt(lastIndex);
         layers.RemoveAt(lastIndex);
         collisionMasks.RemoveAt(lastIndex);
         interactionMasks.RemoveAt(lastIndex);
         colliderSpeeds.RemoveAt(lastIndex);
         colliderPositions.RemoveAt(lastIndex);
         deltaPositions.RemoveAt(lastIndex);
-        
+
 
         collider.Index = -1;
     }

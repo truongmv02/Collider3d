@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Unity.Collections;
 using UnityEngine;
 
 public abstract class ColliderBase : MonoBehaviour
@@ -14,6 +15,12 @@ public abstract class ColliderBase : MonoBehaviour
     }
 
     [SerializeField]
+    protected bool isTrigger;
+
+    [SerializeField]
+    protected bool isKinematic;
+
+    [SerializeField]
     protected CollisionLayer layer;
 
     [SerializeField]
@@ -25,6 +32,22 @@ public abstract class ColliderBase : MonoBehaviour
     [SerializeField]
     protected Vector3 speed;
 
+
+    public bool IsTrigger
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => isTrigger;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => isTrigger = value;
+    }
+
+    public bool IsKinematic
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => isKinematic;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => isKinematic = value;
+    }
 
     public Vector3 Speed
     {
@@ -70,6 +93,11 @@ public abstract class ColliderBase : MonoBehaviour
     public Vector3 WorldCenter => transform.position;
 
 
+    // Collision Event
+    private event Action<ColliderBase> onColliderEnter;
+    private event Action<ColliderBase> onColliderStay;
+    private event Action<ColliderBase> onColliderExit;
+
     #region UNITY EVENT METHODS
 
     protected virtual void Awake()
@@ -82,6 +110,18 @@ public abstract class ColliderBase : MonoBehaviour
         CollisionManager.Instance.AddCollider(this);
     }
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying)
+        {
+            CollisionManager.Instance.SetPosition(this, transform.position);
+            CollisionManager.Instance.SetIsKinematic(this, isKinematic);
+            CollisionManager.Instance.SetIsTrigger(this, isTrigger);
+        }
+    }
+#endif
+
     protected virtual void OnDestroy()
     {
         // CollisionManager.Instance.RemoveCollider(this);
@@ -93,6 +133,21 @@ public abstract class ColliderBase : MonoBehaviour
     }
 
     #endregion
+
+    public virtual void OnColliderEnter(ColliderBase other)
+    {
+        onColliderEnter?.Invoke(other);
+    }
+
+    public virtual void OnColliderStay(ColliderBase other)
+    {
+        onColliderStay?.Invoke(other);
+    }
+
+    public virtual void OnColliderExit(ColliderBase other)
+    {
+        onColliderExit?.Invoke(other);
+    }
 
 
     protected virtual void OnDrawGizmosSelected()

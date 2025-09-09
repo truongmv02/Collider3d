@@ -49,7 +49,7 @@ MonoBehaviour:
   <Index>k__BackingField: 0
   layer: 2
   collisionMask: 2
-  interactionMask: 0
+  interactionMask: 2
   speed: {x: 0, y: 0, z: 0}
   radius: 0.5
 --- !u!33 &8566404090574735704

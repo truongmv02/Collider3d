@@ -15,7 +15,7 @@ public class EnemyManager : SingletonMonoBehaviour<EnemyManager>
     }
 
 
-    private void Update()
+    private void Update1()
     {
         for (int i = 0, count = colliders.Count; i < count; i++)
         {

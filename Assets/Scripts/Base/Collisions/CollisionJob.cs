@@ -9,6 +9,9 @@ using UnityEngine;
 public struct CollisionJob : IJobParallelFor
 {
     [ReadOnly]
+    public NativeList<bool> isTriggers, isKinematics;
+
+    [ReadOnly]
     public NativeList<CollisionLayer> layers, collisionMasks, interactionMasks;
 
     [ReadOnly]
@@ -98,18 +101,39 @@ public struct CollisionJob : IJobParallelFor
 
         float dist = math.sqrt(distSq);
         if (dist < 1e-6f) return; // tránh chia 0
+        
 
         if (isInteraction)
         {
             collisions.Add(index, otherIndex);
         }
-        
-        if(!isCollision) return;
 
+        if (!isCollision) return;
+        
+        if (isTriggers[index] || isTriggers[otherIndex])
+        {
+            return;
+        }
+        
+        bool kinematicA = isKinematics[index];
+        bool kinematicB = isKinematics[otherIndex];
+        if (kinematicA && kinematicB) return;
+        
         float invDist = 1f / dist;
         float3 normal = new float3(dx * invDist, 0, dz * invDist);
 
         float depth = minDist - dist;
+        
+        if (kinematicA && !kinematicB)
+        {
+            deltaPositions[otherIndex] += normal * depth ;
+            return;
+        }
+        if (!kinematicA && kinematicB)
+        {
+            deltaPositions[index] -= normal * depth ;
+            return;
+        }
 
         float3 velocity = speeds[index];
         float lenSq = math.lengthsq(velocity);
