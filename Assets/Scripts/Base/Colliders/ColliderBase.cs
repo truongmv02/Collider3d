@@ -12,7 +12,7 @@ public abstract class ColliderBase : MonoBehaviour
         set;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get;
-    }
+    } = -1;
 
     [SerializeField]
     protected bool isTrigger;
@@ -54,7 +54,10 @@ public abstract class ColliderBase : MonoBehaviour
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => speed;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => speed = value;
+        set
+        {
+            speed = value;
+        }
     }
 
     private Transform transformCache;
@@ -110,18 +113,6 @@ public abstract class ColliderBase : MonoBehaviour
         CollisionManager.Instance.AddCollider(this);
     }
 
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (Application.isPlaying)
-        {
-            CollisionManager.Instance.SetPosition(this, transform.position);
-            CollisionManager.Instance.SetIsKinematic(this, isKinematic);
-            CollisionManager.Instance.SetIsTrigger(this, isTrigger);
-        }
-    }
-#endif
-
     protected virtual void OnDestroy()
     {
         // CollisionManager.Instance.RemoveCollider(this);
@@ -148,7 +139,59 @@ public abstract class ColliderBase : MonoBehaviour
     {
         onColliderExit?.Invoke(other);
     }
+    
+    #region ADD AND REMOVE COLLIDER EVENTS
 
+    public virtual void AddColliderEnterEvent(Action<ColliderBase> onEnter)
+    {
+        onColliderEnter += onEnter;
+    }
+
+    public virtual void AddColliderStayEvent(Action<ColliderBase> onStay)
+    {
+        onColliderStay += onStay;
+    }
+
+    public virtual void AddColliderExitEvent(Action<ColliderBase> onExit)
+    {
+        onColliderExit += onExit;
+    }
+
+    public virtual void RemoveColliderEnterEvent(Action<ColliderBase> onEnter)
+    {
+        onColliderEnter -= onEnter;
+    }
+
+    public virtual void RemoveColliderStayEvent(Action<ColliderBase> onStay)
+    {
+        onColliderStay -= onStay;
+    }
+
+    public virtual void RemoveColliderExitEvent(Action<ColliderBase> onExit)
+    {
+        onColliderExit -= onExit;
+    }
+
+    #endregion
+
+    public void SetSpeed(Vector3 speed)
+    {
+        this.speed = speed;
+        CollisionManager.Instance.SetSpeed(this, speed);
+    }
+    public void Destroy()
+    {
+        CollisionManager.Instance.RemoveCollider(this);
+    }
+    public override int GetHashCode()
+    {
+        return Index.GetHashCode();
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is ColliderBase other && this.Index == other.Index;
+    }
 
     protected virtual void OnDrawGizmosSelected()
     {

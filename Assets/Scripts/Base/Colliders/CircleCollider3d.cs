@@ -13,19 +13,13 @@ public class CircleCollider3d : ColliderBase
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => radius;
     }
-
-    [ContextMenu("set speed")]
-    public void SetSpeed()
-    {
-        CollisionManager.Instance.SetSpeed(this, speed);
-    }
+    
 
     protected override void OnDrawGizmosSelected()
     {
         // base.OnDrawGizmosSelected();
         Gizmos.color = Color.yellow;
-        var sphereScale = transform.lossyScale;
-        var scale = radius * Mathf.Max(sphereScale.x, sphereScale.y, sphereScale.z);
+        var scale = radius;
         var pos = transform.position ;
         Gizmos.DrawWireSphere(pos, scale);
         Gizmos.color = Color.white;
