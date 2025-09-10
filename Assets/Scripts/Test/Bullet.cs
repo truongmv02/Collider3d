@@ -15,10 +15,10 @@ public class Bullet : MonoBehaviour
     private void OnColliderEnter(ColliderBase other)
     {
         Debug.Log("OnColliderEnter");
-        collider.Destroy();
-        other.Destroy();
-        EnemyManager.Instance.Remove(other);
-        Destroy(collider.gameObject);
-        Destroy(other.gameObject);
+        // collider.Destroy();
+        // other.Destroy();
+        // EnemyManager.Instance.Remove(other);
+        // Destroy(collider.gameObject);
+        // Destroy(other.gameObject);
     }
 }

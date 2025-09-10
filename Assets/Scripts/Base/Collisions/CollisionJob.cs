@@ -67,7 +67,7 @@ public struct CollisionJob : IJobParallelFor
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void CheckCollision(int index, int otherIndex)
+    private bool IsValidMask(int index, int otherIndex, out bool canCollide, out bool canInteract)
     {
         CollisionLayer layerA = layers[index];
         CollisionLayer layerB = layers[otherIndex];
@@ -78,12 +78,17 @@ public struct CollisionJob : IJobParallelFor
         CollisionLayer interactionA = interactionMasks[index];
         CollisionLayer interactionB = interactionMasks[otherIndex];
 
-        bool isCollision = CanCollide(layerA, collisionMaskA, layerB, collisionMaskB);
-        bool isInteraction = CanCollide(layerA, interactionA, layerB, interactionB);
+        canCollide = CanCollide(layerA, collisionMaskA, layerB, collisionMaskB);
+        canInteract = CanCollide(layerA, interactionA, layerB, interactionB);
 
-        if (!isCollision && !isInteraction) return;
+        return canCollide || canInteract;
+    }
 
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryComputeOverlap(int index, int otherIndex, out float3 normal, out float depth)
+    {
+        normal = float3.zero;
+        depth = 0f;
         float3 posA = positions[index] + deltaPositions[index];
         float3 posB = positions[otherIndex] + deltaPositions[otherIndex];
 
@@ -93,48 +98,47 @@ public struct CollisionJob : IJobParallelFor
         float dx = posB.x - posA.x;
         float dz = posB.z - posA.z;
         float distSq = dx * dx + dz * dz;
-
         float minDist = radiusA + radiusB;
-        float minDistSq = minDist * minDist;
-
-        if (distSq >= minDistSq) return;
+        if (distSq >= minDist * minDist) return false;
 
         float dist = math.sqrt(distSq);
-        if (dist < 1e-6f) return; // tránh chia 0
-        
+        if (dist < 1e-6f) return false; // tránh chia 0
 
-        if (isInteraction)
-        {
-            collisions.Add(index, otherIndex);
-        }
+        float invDist = 1f / dist;
+        normal = new float3(dx * invDist, 0, dz * invDist);
+        depth = minDist - dist;
 
-        if (!isCollision) return;
-        
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool HandleTriggerAndKinematic(int index, int otherIndex, float3 normal, float depth)
+    {
         if (isTriggers[index] || isTriggers[otherIndex])
-        {
-            return;
-        }
-        
+            return false;
         bool kinematicA = isKinematics[index];
         bool kinematicB = isKinematics[otherIndex];
-        if (kinematicA && kinematicB) return;
-        
-        float invDist = 1f / dist;
-        float3 normal = new float3(dx * invDist, 0, dz * invDist);
 
-        float depth = minDist - dist;
-        
-        if (kinematicA && !kinematicB)
+        if (kinematicA && kinematicB) return false;
+
+        if (kinematicA)
         {
-            deltaPositions[otherIndex] += normal * depth ;
-            return;
-        }
-        if (!kinematicA && kinematicB)
-        {
-            deltaPositions[index] -= normal * depth ;
-            return;
+            deltaPositions[otherIndex] += normal * depth;
+            return false;
         }
 
+        if (kinematicB)
+        {
+            deltaPositions[index] -= normal * depth;
+            return false;
+        }
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ApplyCollisionResponse(int index, int otherIndex, float3 normal, float depth)
+    {
         float3 velocity = speeds[index];
         float lenSq = math.lengthsq(velocity);
         bool hasVelocity = lenSq > 1e-6f;
@@ -147,6 +151,32 @@ public struct CollisionJob : IJobParallelFor
             deltaPositions[index] -= correction;
         else
             deltaPositions[otherIndex] += correction;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void CheckCollision(int index, int otherIndex)
+    {
+        if (!IsValidMask(index, otherIndex, out bool canCollide, out bool canInteract)) return;
+
+        if (!TryComputeOverlap(index, otherIndex, out float3 normal, out float depth))
+        {
+            return;
+        }
+
+
+        if (canInteract)
+        {
+            collisions.Add(index, otherIndex);
+        }
+
+        if (!canCollide) return;
+
+        if (!HandleTriggerAndKinematic(index, otherIndex, normal, depth))
+        {
+            return;
+        }
+
+        ApplyCollisionResponse(index,  otherIndex, normal, depth);
 
         // float3 position = positions[index] + deltaPositions[index];
         // float3 size = sizes[index];

@@ -211,7 +211,6 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                     if (i > other) continue;
                     if (!newCollisions.ContainsKeyValue(i, other))
                     {
-                        Debug.Log($"Exit {i}<->{other}");
                     }
                 } while (collisions.TryGetNextValue(out other, ref it));
             }

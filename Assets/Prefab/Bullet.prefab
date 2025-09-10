@@ -118,4 +118,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   collider: {fileID: 1031090571557618219}
-  speed: 8
+  speed: 2
