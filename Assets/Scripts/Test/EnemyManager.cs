@@ -28,7 +28,7 @@ public class EnemyManager : SingletonMonoBehaviour<EnemyManager>
             var direction = target.transform.position - collider.transform.position;
             direction.Normalize();
             direction.y = 0;
-            collider.Speed =Random.Range(1f, 2f) * Time.fixedDeltaTime * direction;
+            collider.Speed =Random.Range(5f, 6f) * Time.fixedDeltaTime * direction;
             collisionManager.SetSpeed(collider, collider.Speed);
         }
     }

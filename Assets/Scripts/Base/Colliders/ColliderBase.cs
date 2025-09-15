@@ -32,6 +32,8 @@ public abstract class ColliderBase : MonoBehaviour
     [SerializeField]
     protected Vector3 speed;
 
+    [SerializeField]
+    protected int priority ;
 
     public bool IsTrigger
     {
@@ -57,6 +59,17 @@ public abstract class ColliderBase : MonoBehaviour
         set
         {
             speed = value;
+        }
+    }
+    
+    public int Priority
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => priority;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set
+        {
+            priority = value;
         }
     }
 

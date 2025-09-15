@@ -7,6 +7,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
+[DefaultExecutionOrder(-100)] 
 public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
 {
     private const int OBJECT_CAPACITY = 1000;
@@ -25,10 +26,11 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     private NativeList<bool> isKinematics;
 
     private NativeList<float3> colliderSpeeds;
-    private NativeList<float3> colliderPositions;
+    private NativeList<int> priorities;
+    private NativeList<float3> colliderPositions; 
     private NativeList<float3> colliderSizes;
     private NativeList<float3> deltaPositions;
-    private NativeList<quaternion> colliderRotations;
+    private NativeList<float> colliderAngles; // deg
     private NativeParallelMultiHashMap<int2, int> chunks;
     public NativeParallelMultiHashMap<int, int> collisions;
     public NativeParallelMultiHashMap<int, int> newCollisions;
@@ -45,12 +47,14 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         interactionMasks = new NativeList<CollisionLayer>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderPositions = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderSpeeds = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
+        priorities =  new NativeList<int>(OBJECT_CAPACITY, Allocator.Persistent);
         colliderSizes = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
-        colliderRotations = new NativeList<quaternion>(OBJECT_CAPACITY, Allocator.Persistent);
+        colliderAngles = new NativeList<float>(OBJECT_CAPACITY, Allocator.Persistent);
         deltaPositions = new NativeList<float3>(OBJECT_CAPACITY, Allocator.Persistent);
         chunks = new NativeParallelMultiHashMap<int2, int>(OBJECT_CAPACITY, Allocator.Persistent);
         collisions = new NativeParallelMultiHashMap<int, int>(OBJECT_CAPACITY * COLLISION_MAX, Allocator.Persistent);
         newCollisions = new NativeParallelMultiHashMap<int, int>(OBJECT_CAPACITY * COLLISION_MAX, Allocator.Persistent);
+        Debug.Log("init list");
     }
 
     private void OnDestroy()
@@ -66,9 +70,10 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         collisionMasks.Dispose();
         interactionMasks.Dispose();
         colliderSpeeds.Dispose();
+        priorities.Dispose();
         colliderPositions.Dispose();
         colliderSizes.Dispose();
-        colliderRotations.Dispose();
+        colliderAngles.Dispose();
         chunks.Dispose();
         deltaPositions.Dispose();
         collisions.Dispose();
@@ -137,7 +142,9 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             positions = colliderPositions,
             sizes = colliderSizes,
             deltaPositions = deltaPositions,
+            angles = colliderAngles,
             speeds = colliderSpeeds,
+            priorities = priorities,
             chunkSize = CHUNK_SIZE,
             chunks = chunks,
             collisions = newCollisions.AsParallelWriter(),
@@ -173,6 +180,88 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void CheckCollision()
     {
+        
+    //      int count = colliderList.Count;
+    //
+    // // Tập hợp tất cả cặp va chạm cũ + mới
+    // var allPairs = new NativeHashSet<long>(count * 4, Allocator.Temp);
+    //
+    // // Add từ newCollisions
+    // using (var keys = newCollisions.GetKeyArray(Allocator.Temp))
+    // {
+    //     foreach (var i in keys)
+    //     {
+    //         NativeParallelMultiHashMapIterator<int> it;
+    //         int other;
+    //         if (newCollisions.TryGetFirstValue(i, out other, out it))
+    //         {
+    //             do
+    //             {
+    //                 int a = math.min(i, other);
+    //                 int b = math.max(i, other);
+    //                 allPairs.Add(((long)a << 32) | (uint)b);
+    //             }
+    //             while (newCollisions.TryGetNextValue(out other, ref it));
+    //         }
+    //     }
+    // }
+    //
+    // // Add từ collisions (cũ)
+    // using (var keys = collisions.GetKeyArray(Allocator.Temp))
+    // {
+    //     foreach (var i in keys)
+    //     {
+    //         NativeParallelMultiHashMapIterator<int> it;
+    //         int other;
+    //         if (collisions.TryGetFirstValue(i, out other, out it))
+    //         {
+    //             do
+    //             {
+    //                 int a = math.min(i, other);
+    //                 int b = math.max(i, other);
+    //                 allPairs.Add(((long)a << 32) | (uint)b);
+    //             }
+    //             while (collisions.TryGetNextValue(out other, ref it));
+    //         }
+    //     }
+    // }
+    //
+    // // Duyệt 1 lần duy nhất
+    // foreach (var pair in allPairs)
+    // {
+    //     int a = (int)(pair >> 32);
+    //     int b = (int)(pair & 0xffffffff);
+    //
+    //     bool inNew = newCollisions.ContainsKeyValue(a, b) || newCollisions.ContainsKeyValue(b, a);
+    //     bool inOld = collisions.ContainsKeyValue(a, b) || collisions.ContainsKeyValue(b, a);
+    //
+    //     var col1 = colliderList[a];
+    //     var col2 = colliderList[b];
+    //
+    //     if (inNew)
+    //     {
+    //         if (inOld)
+    //         {
+    //             col1.OnColliderStay(col2);
+    //             col2.OnColliderStay(col1);
+    //         }
+    //         else
+    //         {
+    //             col1.OnColliderEnter(col2);
+    //             col2.OnColliderEnter(col1);
+    //         }
+    //     }
+    //     else if (inOld) // Exit
+    //     {
+    //         col1.OnColliderExit(col2);
+    //         col2.OnColliderExit(col1);
+    //     }
+    // }
+    //
+    // allPairs.Dispose();
+        
+    
+    
         int count = colliderList.Count;
         for (int i = 0; i < count; i++)
         {
@@ -198,7 +287,6 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                 } while (newCollisions.TryGetNextValue(out other, ref it));
             }
         }
-
         // OnTriggerExit
         for (int i = 0; i < count; i++)
         {
@@ -209,8 +297,13 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
                 do
                 {
                     if (i > other) continue;
+        
                     if (!newCollisions.ContainsKeyValue(i, other))
                     {
+                        var col1 = colliderList[i];
+                        var col2 = colliderList[other];
+                        col1.OnColliderExit(col2);
+                        col2.OnColliderExit(col1);
                     }
                 } while (collisions.TryGetNextValue(out other, ref it));
             }
@@ -251,26 +344,28 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         deltaPositions.Add(float3.zero);
         colliderList.Add(collider);
         colliderSpeeds.Add(collider.Speed);
+        priorities.Add(collider.Priority);
         colliderPositions.Add(collider.Transform.position);
+        colliderAngles.Add(collider.Transform.localEulerAngles.y);
         ResizeChunk();
         ResizeCollisionMap();
     }
 
     public void RemoveCollider(ColliderBase collider)
     {
+        if (collider == null) return;
+        if (collider.Index == -1) return;
         colliderRemoves.Add(collider);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RemoveCollider(int index)
     {
-        if (index == -1) return;
         if (index >= colliderList.Count)
         {
             Debug.Log($"Collider index: {index} out of range");
             return;
         }
-
 
         ColliderBase collider = colliderList[index];
 
@@ -283,14 +378,15 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         interactionMasks[index] = interactionMasks[lastIndex];
         colliderPositions[index] = colliderPositions[lastIndex];
         colliderSpeeds[index] = colliderSpeeds[lastIndex];
+        priorities[index] = priorities[lastIndex];
         colliderSizes[index] = colliderSizes[lastIndex];
         deltaPositions[index] = deltaPositions[lastIndex];
+        colliderAngles[index] = colliderAngles[lastIndex];
 
         var lastCollider = colliderList[lastIndex];
         colliderList[index] = lastCollider;
         colliderList[lastIndex] = collider;
         lastCollider.Index = index;
-
 
         colliderList.RemoveAt(lastIndex);
         isTriggers.RemoveAt(lastIndex);
@@ -299,6 +395,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
         collisionMasks.RemoveAt(lastIndex);
         interactionMasks.RemoveAt(lastIndex);
         colliderSpeeds.RemoveAt(lastIndex);
+        priorities.RemoveAt(lastIndex);
         colliderPositions.RemoveAt(lastIndex);
         deltaPositions.RemoveAt(lastIndex);
 
@@ -308,37 +405,38 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
     private void RemoveCollisionsOf(int index, ref NativeParallelMultiHashMap<int, int> map)
     {
         var keys = map.GetKeyArray(Allocator.Temp);
+        var pairList = new NativeList<int2>(map.Count(), Allocator.TempJob);
+
         foreach (var key in keys)
         {
             if (map.TryGetFirstValue(key, out var value, out var it))
             {
                 do
                 {
-                    if (key == index || value == index)
-                    {
-                        var newMap = new NativeParallelMultiHashMap<int, int>(map.Capacity, Allocator.Persistent);
-                        foreach (var k in keys)
-                        {
-                            if (map.TryGetFirstValue(k, out var v, out var iter))
-                            {
-                                do
-                                {
-                                    if (k != index && v != index)
-                                        newMap.Add(k, v);
-                                } while (map.TryGetNextValue(out v, ref iter));
-                            }
-                        }
-
-                        map.Dispose();
-                        map = newMap;
-                        keys.Dispose();
-                        return;
-                    }
+                    pairList.Add(new int2(key, value));
                 } while (map.TryGetNextValue(out value, ref it));
             }
         }
 
         keys.Dispose();
+
+        // Create new map
+        var newMap = new NativeParallelMultiHashMap<int, int>(map.Capacity, Allocator.Persistent);
+
+        // Run job
+        var job = new RemoveCollisionJob
+        {
+            pairs = pairList.AsDeferredJobArray(),
+            removeIndex = index,
+            newMap = newMap.AsParallelWriter()
+        };
+        job.Schedule(pairList.Length, 64).Complete();
+
+        // Swap
+        map.Dispose();
+        map = newMap;
+
+        pairList.Dispose();
     }
 
     private void ResizeCollisionMap()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -6,26 +7,23 @@ public class SpawnBullet : MonoBehaviour
 {
     public Bullet bulletPrefab;
 
-    float delayTime = 0.05f;
+    float delayTime = 5f;
     private float time;
 
     private void Update()
     {
-        if (!Input.GetMouseButton(0)) return;
-        if (time == 0)
+        if (!Input.GetMouseButtonDown(0)) return;
+        StartCoroutine(Spawn());
+    }
+
+    IEnumerator Spawn()
+    {
+        for (int i = 0; i < 100; i++)
         {
             var bullet = Instantiate(bulletPrefab);
-            bullet.collider.SetSpeed(bullet.speed * Time.deltaTime * new Vector3(Random.Range(-1f,1f), 0f, Random.Range(-1f, 1f)));
-            Debug.Log("set bullet speed");
-        }
-
-        else
-        {
-            time += Time.deltaTime;
-            if (time >= delayTime)
-            {
-                time = 0;
-            }
+            bullet.collider.SetSpeed(bullet.speed * Time.deltaTime *
+                                     new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)));
+            if (i % 20 == 0) yield return null;
         }
     }
 }
