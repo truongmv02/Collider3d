@@ -353,7 +353,7 @@ public struct CollisionJob : IJobParallelFor
 
         float dot = hasVelocity ? math.dot(velocity * math.rsqrt(lenSq), normal) : 0f;
 
-        float3 correction = normal * (depth * 0.5f * 0.6f);
+        float3 correction = normal * (depth * 0.3f);
 
         var priorityA = priorities[index];
         var priorityB = priorities[otherIndex];

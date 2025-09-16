@@ -12,6 +12,7 @@ public class MenuScene : MonoBehaviour
 
     private void Start()
     {
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
         Application.targetFrameRate = 500;
         custom.onClick.AddListener(() => SceneManager.LoadScene("CustomCollider"));
         unity.onClick.AddListener(() => SceneManager.LoadScene("ColliderUnity"));

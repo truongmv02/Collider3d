@@ -149,7 +149,7 @@ public class CollisionManager : SingletonMonoBehaviour<CollisionManager>
             chunks = chunks,
             collisions = newCollisions.AsParallelWriter(),
         };
-        JobHandle handle = job.Schedule(count, 64);
+        JobHandle handle = job.Schedule(count, 32);
         handle.Complete();
 
         ApplyDeltaJob applyDeltaJob = new ApplyDeltaJob()
